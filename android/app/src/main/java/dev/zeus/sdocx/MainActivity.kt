@@ -58,11 +58,12 @@ class MainActivity : Activity() {
     }
 
     inner class Bridge {
-        @JavascriptInterface fun begin(name: String, mime: String): Boolean = try {
+        @JavascriptInterface fun begin(name: String, mime: String, dir: String): Boolean = try {
             failed = false
+            val d = dir.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().ifEmpty { "Notlar" }
             val v = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, name); put(MediaStore.Downloads.MIME_TYPE, mime)
-                put(MediaStore.Downloads.RELATIVE_PATH, "Download/ZeusSDOCX"); put(MediaStore.Downloads.IS_PENDING, 1)
+                put(MediaStore.Downloads.RELATIVE_PATH, "Download/ZeusSDOCX/$d"); put(MediaStore.Downloads.IS_PENDING, 1)
             }
             outUri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v)
             out = contentResolver.openOutputStream(outUri!!); true
