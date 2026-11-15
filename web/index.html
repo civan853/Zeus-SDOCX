@@ -1,0 +1,9 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zeus SDOCX</title><link rel="stylesheet" href="style.css"></head><body><main>
+<section class="card"><h1>Samsung Notes (.sdocx) <i>→</i> PDF <i>+</i> Ses</h1>
+<div class="row">El yazısı: <select id="mode"><option value="image">Resim (her yerde aynı görünür)</option><option value="vector">Vektör (küçük boyut + daha hızlı)</option></select></div>
+<div class="row">Kalite: <select id="q"><option value="2">Normal (daha hızlı)</option><option value="3">Yüksek (yavaş, büyük)</option></select></div>
+<label class="pick"><svg><defs><linearGradient id="g"><stop offset="0" stop-color="#c62828"/><stop offset="1" stop-color="#2e7d32"/></linearGradient></defs><rect x="1.5" y="1.5" rx="22" style="width:calc(100% - 3px);height:calc(100% - 3px)" fill="none" stroke="url(#g)" stroke-width="3" stroke-dasharray="9 7"/></svg><span class="ico">⬆</span><span>.sdocx dosyası seç</span><input id="file" type="file" hidden disabled></label>
+<p id="hint">Hazırlanıyor...</p><div class="by">Made by Zeus</div></section>
+<section id="steps" class="panel" hidden><ol id="list"></ol><div id="bar"><div></div></div><div id="det"></div></section>
+<section id="res"></section></main>
+<script src="vendor/jszip.min.js"></script><script src="vendor/pdf-lib.min.js"></script><script type="module" src="app.js"></script></body></html>
