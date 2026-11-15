@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Base64
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.*
 import android.widget.Toast
@@ -19,6 +20,7 @@ class MainActivity : Activity() {
     private var chooser: ValueCallback<Array<Uri>>? = null
     private var out: OutputStream? = null
     private var outUri: Uri? = null
+    private var failed = false
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
@@ -30,6 +32,15 @@ class MainActivity : Activity() {
         web.settings.allowFileAccess = false
         web.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest) = loader.shouldInterceptRequest(r.url)
+
+            // Bellek dolunca WebView süreci ölür; uygulamayı da öldürmek yerine yeniden başlat.
+            override fun onRenderProcessGone(v: WebView, d: RenderProcessGoneDetail): Boolean {
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Bellek doldu, uygulama yeniden başlıyor. Dosyalar kaydedildiyse İndirilenler/ZeusSDOCX içindedir.", Toast.LENGTH_LONG).show()
+                    (v.parent as? ViewGroup)?.removeView(v); v.destroy(); recreate()
+                }
+                return true
+            }
         }
         web.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(w: WebView, cb: ValueCallback<Array<Uri>>, p: FileChooserParams): Boolean {
@@ -48,6 +59,7 @@ class MainActivity : Activity() {
 
     inner class Bridge {
         @JavascriptInterface fun begin(name: String, mime: String): Boolean = try {
+            failed = false
             val v = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, name); put(MediaStore.Downloads.MIME_TYPE, mime)
                 put(MediaStore.Downloads.RELATIVE_PATH, "Download/ZeusSDOCX"); put(MediaStore.Downloads.IS_PENDING, 1)
@@ -56,22 +68,30 @@ class MainActivity : Activity() {
             out = contentResolver.openOutputStream(outUri!!); true
         } catch (e: Exception) { false }
 
-        @JavascriptInterface fun chunk(b64: String) { out?.write(Base64.decode(b64, Base64.DEFAULT)) }
+        @JavascriptInterface fun chunk(b64: String) {
+            try { out?.write(Base64.decode(b64, Base64.DEFAULT)) } catch (e: Exception) { failed = true }
+        }
 
-        @JavascriptInterface fun end(): String {
+        @JavascriptInterface fun end(): String = try {
             out?.close(); out = null
-            val u = outUri ?: return ""
-            contentResolver.update(u, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
-            return u.toString()
+            val u = outUri
+            if (failed || u == null) "" else {
+                contentResolver.update(u, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
+                u.toString()
+            }
+        } catch (e: Exception) { "" }
+
+        @JavascriptInterface fun open(uri: String, mime: String) {
+            runOnUiThread {
+                try { startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
+                catch (e: Exception) { Toast.makeText(this@MainActivity, "Açacak uygulama bulunamadı", Toast.LENGTH_LONG).show() }
+            }
         }
 
-        @JavascriptInterface fun open(uri: String, mime: String) = runOnUiThread {
-            try { startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(uri), mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
-            catch (e: Exception) { Toast.makeText(this@MainActivity, "Açacak uygulama bulunamadı", Toast.LENGTH_LONG).show() }
-        }
-
-        @JavascriptInterface fun keepAwake(on: Boolean) = runOnUiThread {
-            if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        @JavascriptInterface fun keepAwake(on: Boolean) {
+            runOnUiThread {
+                if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
         }
     }
 }
