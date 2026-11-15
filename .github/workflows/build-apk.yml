@@ -1,5 +1,6 @@
 name: Build APK
-on: { push: { branches: [main] }, workflow_dispatch: {} }
+on: { push: { branches: [main], tags: ['v*'] }, workflow_dispatch: {} }
+permissions: { contents: write }
 jobs:
   apk:
     runs-on: ubuntu-24.04
@@ -10,5 +11,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: 8.7 }
       - run: gradle -p android assembleDebug --no-daemon
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk ZeusSDOCX.apk
       - uses: actions/upload-artifact@v4
-        with: { name: ZeusSDOCX-apk, path: android/app/build/outputs/apk/debug/app-debug.apk }
+        with: { name: ZeusSDOCX-apk, path: ZeusSDOCX.apk }
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with: { files: ZeusSDOCX.apk }
