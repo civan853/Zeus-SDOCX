@@ -25,15 +25,15 @@ const rasterize = (svg, w, h) => new Promise((res, rej) => {
   img.onerror = () => rej(new Error('Sayfa resme çevrilemedi')); img.src = url;
 });
 const b64 = (b) => new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result.split(',')[1]); f.readAsDataURL(b); });
-async function save(blob, name, mime) {
+async function save(blob, name, mime, dir) {
   if (!A) return { url: URL.createObjectURL(blob), name, mime };
-  if (!A.begin(name, mime)) throw new Error('Dosya oluşturulamadı');
+  if (!A.begin(name, mime, dir)) throw new Error('Dosya oluşturulamadı');
   for (let o = 0; o < blob.size; o += 524288) A.chunk(await b64(blob.slice(o, o + 524288)));
-  const u = A.end(); if (!u) throw new Error('Dosya kaydedilemedi'); return { uri: u, name, mime };
+  const u = A.end(); if (!u) throw new Error('Dosya kaydedilemedi'); return { uri: u, name, mime, dir };
 }
 function item(r) {
   const d = document.createElement('div'); d.className = 'item';
-  d.innerHTML = `<div><b></b><small>${A ? 'İndirilenler/ZeusSDOCX' : 'Tarayıcı indirmeleri'}</small></div>`;
+  d.innerHTML = `<div><b></b><small>${A ? 'İndirilenler/ZeusSDOCX/' + r.dir : 'Tarayıcı indirmeleri'}</small></div>`;
   d.querySelector('b').textContent = r.name;
   const b = document.createElement(A ? 'button' : 'a'); b.textContent = A ? 'Aç' : 'İndir';
   if (A) b.onclick = () => A.open(r.uri, r.mime); else { b.href = r.url; b.download = r.name; }
@@ -50,8 +50,8 @@ $('file').onchange = async (e) => {
     const base = f.name.replace(/\.sdocx$/i, '');
     const r = await convertSdocx(await f.arrayBuffer(), { JSZip, PDFLib, DocumentSession }, progress, { mode: $('mode').value, rasterize, scale: +$('q').value });
     step(4); bar(100);
-    item(await save(new Blob([r.pdf], { type: 'application/pdf' }), base + '_notlu.pdf', 'application/pdf'));
-    for (const [i, a] of r.audio.entries()) { const ext = (a.name.match(/\.(\w+)$/) || [, 'm4a'])[1].toLowerCase(); item(await save(new Blob([a.data]), `${base}_ses${r.audio.length > 1 ? i + 1 : ''}.${ext}`, MIME[ext] || 'audio/*')); }
+    item(await save(new Blob([r.pdf], { type: 'application/pdf' }), base + '_notlu.pdf', 'application/pdf', $('lay').value === 'note' ? base : 'PDF'));
+    for (const [i, a] of r.audio.entries()) { const ext = (a.name.match(/\.(\w+)$/) || [, 'm4a'])[1].toLowerCase(); item(await save(new Blob([a.data]), `${base}_ses${r.audio.length > 1 ? i + 1 : ''}.${ext}`, MIME[ext] || 'audio/*', $('lay').value === 'note' ? base : 'Ses')); }
     lis.forEach((li) => (li.className = 'done')); mark(-1); $('det').textContent = 'Bitti ✓ ' + sum() + (r.audio.length ? '' : ' (ses kaydı yok)');
   } catch (err) { const a = lis.find((li) => li.className === 'act'); if (a) a.className = 'err'; $('det').textContent = 'Hata: ' + (err.message || err); console.error(err); }
   finally { if (A) A.keepAwake(false); }

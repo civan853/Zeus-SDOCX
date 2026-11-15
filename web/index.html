@@ -2,6 +2,7 @@
 <section class="card"><h1>Samsung Notes (.sdocx) <i>→</i> PDF <i>+</i> Ses</h1>
 <div class="row">El yazısı: <select id="mode"><option value="vector" selected>Vektör (hızlı, küçük boyut)</option><option value="image">Resim (her yerde aynı görünür, yavaş)</option></select></div>
 <div class="row">Kalite: <select id="q"><option value="1.5">Hızlı (daha düşük çözünürlük)</option><option value="2" selected>Normal</option><option value="3">Yüksek (yavaş, büyük)</option></select></div>
+<div class="row">Düzen: <select id="lay"><option value="note" selected>Her not kendi klasöründe (PDF + ses)</option><option value="type">PDF ve sesler ayrı klasörlerde</option></select></div>
 <label class="pick"><svg><defs><linearGradient id="g"><stop offset="0" stop-color="#c62828"/><stop offset="1" stop-color="#2e7d32"/></linearGradient></defs><rect x="1.5" y="1.5" rx="22" style="width:calc(100% - 3px);height:calc(100% - 3px)" fill="none" stroke="url(#g)" stroke-width="3" stroke-dasharray="9 7"/></svg><span class="ico">⬆</span><span>.sdocx dosyası seç</span><input id="file" type="file" hidden disabled></label>
 <p id="hint">Hazırlanıyor...</p><div class="by">Made by Zeus</div></section>
 <section id="steps" class="panel" hidden><ol id="list"></ol><div id="bar"><div></div></div><div id="det"></div></section>
