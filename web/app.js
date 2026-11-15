@@ -5,7 +5,13 @@ const STEPS = ['Dosya açılıyor', 'Notlar çözülüyor', 'Sayfalar işleniyor
 const MIME = { m4a: 'audio/mp4', mp4: 'audio/mp4', mp3: 'audio/mpeg', aac: 'audio/aac', wav: 'audio/wav', amr: 'audio/amr', ogg: 'audio/ogg', opus: 'audio/ogg', '3ga': 'audio/3gpp' };
 $('list').innerHTML = STEPS.map((s) => `<li><span class="ic"></span><span>${s}</span></li>`).join('');
 const lis = [...$('list').children];
-const step = (i, det = '') => { lis.forEach((li, k) => (li.className = k < i ? 'done' : k === i ? 'act' : '')); $('det').textContent = det; };
+let T = {}, cur = -1, tS = 0;
+const mark = (i) => { const n = performance.now(); if (cur >= 0) T[cur] = (T[cur] || 0) + (n - tS); cur = i; tS = n; };
+const sum = () => STEPS.map((s, k) => (T[k] ? `${s.split(' ')[0]} ${(T[k] / 1000).toFixed(1)}s` : '')).filter(Boolean).join(' · ');
+const step = (i, det = '') => {
+  if (i !== cur) mark(i); lis.forEach((li, k) => (li.className = k < i ? 'done' : k === i ? 'act' : '')); $('det').textContent = det; };
+const syncMode = () => ($('q').parentElement.hidden = $('mode').value === 'vector');
+$('mode').onchange = syncMode; syncMode();
 const bar = (p) => ($('bar').firstChild.style.width = p + '%');
 const progress = (m) => {
   const p = m.match(/Sayfa (\d+)\/(\d+)/);
@@ -23,7 +29,7 @@ async function save(blob, name, mime) {
   if (!A) return { url: URL.createObjectURL(blob), name, mime };
   if (!A.begin(name, mime)) throw new Error('Dosya oluşturulamadı');
   for (let o = 0; o < blob.size; o += 524288) A.chunk(await b64(blob.slice(o, o + 524288)));
-  return { uri: A.end(), name, mime };
+  const u = A.end(); if (!u) throw new Error('Dosya kaydedilemedi'); return { uri: u, name, mime };
 }
 function item(r) {
   const d = document.createElement('div'); d.className = 'item';
@@ -39,14 +45,14 @@ try {
 } catch (e) { $('hint').textContent = 'Başlatılamadı: ' + e.message; }
 $('file').onchange = async (e) => {
   const f = e.target.files[0]; if (!f) return; e.target.value = '';
-  $('res').innerHTML = ''; $('steps').hidden = false; bar(0); step(0); if (A) A.keepAwake(true);
+  T = {}; cur = -1; $('res').innerHTML = ''; $('steps').hidden = false; bar(0); step(0); if (A) A.keepAwake(true);
   try {
     const base = f.name.replace(/\.sdocx$/i, '');
     const r = await convertSdocx(await f.arrayBuffer(), { JSZip, PDFLib, DocumentSession }, progress, { mode: $('mode').value, rasterize, scale: +$('q').value });
     step(4); bar(100);
     item(await save(new Blob([r.pdf], { type: 'application/pdf' }), base + '_notlu.pdf', 'application/pdf'));
     for (const [i, a] of r.audio.entries()) { const ext = (a.name.match(/\.(\w+)$/) || [, 'm4a'])[1].toLowerCase(); item(await save(new Blob([a.data]), `${base}_ses${r.audio.length > 1 ? i + 1 : ''}.${ext}`, MIME[ext] || 'audio/*')); }
-    lis.forEach((li) => (li.className = 'done')); $('det').textContent = r.audio.length ? 'Bitti ✓' : 'Bitti ✓ (bu notta ses kaydı yok)';
+    lis.forEach((li) => (li.className = 'done')); mark(-1); $('det').textContent = 'Bitti ✓ ' + sum() + (r.audio.length ? '' : ' (ses kaydı yok)');
   } catch (err) { const a = lis.find((li) => li.className === 'act'); if (a) a.className = 'err'; $('det').textContent = 'Hata: ' + (err.message || err); console.error(err); }
   finally { if (A) A.keepAwake(false); }
 };
